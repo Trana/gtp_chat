@@ -1,10 +1,9 @@
 from openai import OpenAI
 from pathlib import Path
 import playsound
-import json
-import sys
 import os
 import re
+from datetime import datetime, timedelta 
 
 from recorder import live_speech
 
@@ -16,7 +15,7 @@ messages = [
     },
 ]
 wakeup_word = "volt"
-
+last_interaction_time = None
 
 def detect_wakeup(command: str, wakeup_word: str):
     command = re.sub(r"[,\.!?]", "", command.lower())
@@ -27,18 +26,28 @@ def detect_wakeup(command: str, wakeup_word: str):
 
     return False
 
+def play_sound(sound:str):
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    sound_path = os.path.join(current_dir, 'sounds', sound)
+    playsound.playsound(sound_path)
+
 while True:
-    for message in live_speech():
+    for message in live_speech(10):
         if detect_wakeup(message, wakeup_word):
             print(f"Detected: {message}")
-            current_dir = os.path.dirname(os.path.realpath(__file__))
-            sound_path = os.path.join(current_dir, 'sounds', 'detected.mp3')
-            playsound.playsound(sound_path)
+            play_sound("detected.mp3")
+            start_time = datetime.now()
             break
-    for message in live_speech(50):
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        sound_path = os.path.join(current_dir, 'sounds', 'processing.mp3')
-        playsound.playsound(sound_path)
+    for message in live_speech(50, 15):
+        if message=="_exit_":
+            play_sound("bye.mp3")
+            last_interaction_time = None
+            break
+        if message == "":
+            continue
+
+        last_interaction_time = datetime.now()
+        play_sound("processing.mp3")
         messages.append(
             {
                 "role": "user",
@@ -69,4 +78,4 @@ while True:
         voice.stream_to_file("audio.mp3")
         playsound.playsound("audio.mp3")
         os.remove("audio.mp3")
-        break
+        

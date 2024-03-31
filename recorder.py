@@ -3,12 +3,13 @@ import whisper
 import pyaudio
 import wave
 import os
+from datetime import datetime, timedelta
 
 whisper_model = whisper.load_model("small")
 ambient_detected = False
 speech_volume = 100
 
-def live_speech(wait_time=10):
+def live_speech(wait_time=10, timeout=15):
     global ambient_detected
     global speech_volume
 
@@ -32,6 +33,8 @@ def live_speech(wait_time=10):
     frames = []
     recording = False
     frames_recorded = 0
+    last_interaction_time = datetime.now()
+    
     try:
         while True:
             frames_recorded += 1
@@ -74,11 +77,17 @@ def live_speech(wait_time=10):
                 os.remove("audio.wav")
 
                 yield result["text"].strip()
-                
+                last_interaction_time = datetime.now()
                 frames = []
-
             if recording:
                 frames.append(data)
+
+            if not recording:
+                if datetime.now() >= last_interaction_time + timedelta(seconds=timeout):
+                    print("Timeout reached")
+                    yield "_exit_"
+                    last_interaction_time = None
+                    
 
     finally:
         if not stream:
