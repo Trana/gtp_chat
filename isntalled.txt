@@ -1,0 +1,5 @@
+
+pip install git+https://github.com/openai/whisper.git
+pip3 install torch torchvision
+
+brew install ffmpeg
